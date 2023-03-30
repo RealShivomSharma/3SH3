@@ -17,6 +17,7 @@ Assignment 3
 #define OFFSET_BITS 8
 #define OFFSET_MASK 255
 #define PAGE_SIZE 256
+#define FRAME_SIZE PAGE_SIZE
 #define HIT 1   
 #define MISS 0
 #define INT_SIZE 4
@@ -74,13 +75,12 @@ void TLB_Add(int *PAGE_NUM, int *FRAME_NUM, TLB *TLB) {
     }
      
 }
-.
 void TLB_Update() {
 
 }
 
 void TLB_Init(TLB *T) {
-    T->entries = {{0}};
+    T->entries = {0};
     T->front = -1;
     T->rear = -1;
     T->count = 0;
@@ -123,11 +123,8 @@ int main() {
             }
         }
         
-        
-
 
         PAGE_OFFSET = atoi(buff) & OFFSET_MASK;
-        
         Physical_address = (frame_number << OFFSET_BITS) | PAGE_OFFSET;
 
     }
