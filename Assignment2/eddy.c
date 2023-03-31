@@ -52,7 +52,7 @@ int main() {
 
     uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
     TLBEntry *TLB = NULL;
-    TLB = calloc(MAX_ENTRIES, sizeof(TLBEntry));
+    TLB = MAX_ENTRIES, sizeof(TLBEntry));
     int TLB_index = 0;
 
     //opening addresses file
