@@ -12,7 +12,7 @@ Assignment 3
 
 #define virt_addr 63536
 #define Physical_address_space virt_addr * 1/2
-#define BUFFER_SIZE 6
+#define BUFFER_SIZE 10
 #define MAX_ENTRIES 16 //
 #define PAGES 256 //
 #define PAGE_TABLE 32768 //
@@ -47,7 +47,7 @@ int main() {
     int TLB_total_miss = 0;
     int page_faults_total_miss = 0;
     int total_addresses = 0 ;
-    int logical_address;
+    int logical_address=0;
     int value = 0;
 
     uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
@@ -79,10 +79,10 @@ int main() {
 
     while (fgets(buff, BUFFER_SIZE, fptr) != NULL) {
         total_addresses++;
-        logical_address = atoi(buff);
+        logical_address = atoi(buff); // given addresses
         PAGE_NUM = (logical_address >> OFFSET_BITS) & 0xff;
         PAGE_OFFSET = atoi(buff) & 0xff;
-        Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET;
+        
 
         int index;
         for (index = 0; index < MAX_ENTRIES; index++) {
@@ -107,7 +107,7 @@ int main() {
             TLB[TLB_index].FRAME_NUM = FRAME_NUM;
             TLB_index = ++TLB_index % MAX_ENTRIES;
         }
-        
+        Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET;
         fprintf(output, "Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, value);
 
     }
