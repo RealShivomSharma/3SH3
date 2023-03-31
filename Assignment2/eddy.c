@@ -51,8 +51,12 @@ int main() {
 
     int queued_index = 0;
     
-
-    uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
+    //calloc allows all 0 assigned on initialization
+    //uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
+    int page_table[PAGE_TABLE];
+    for (int i = 0; i < PAGE_TABLE; i++) {
+        page_table[i] = -1;
+    }
     TLBEntry *TLB = NULL;
     TLB = calloc(MAX_ENTRIES, sizeof(TLBEntry));
     int TLB_index = 0;
@@ -94,11 +98,11 @@ int main() {
                 break;
             } 
         }
-        fprintf(output, "\n%d\n", PAGE_NUM);
-        if (!TLB_STATUS) {  //check for tlb miss
+        //fprintf(output, "\n%d\n", PAGE_NUM);
+        if (index == MAX_ENTRIES) {  //check for tlb miss
             TLB_total_miss++;
             FRAME_NUM = page_table[PAGE_NUM];
-            if (FRAME_NUM == 0) {
+            if (FRAME_NUM == -1) {
                 //Page Fault
                 page_faults_total_miss++;
                 FRAME_NUM = queued_index;
