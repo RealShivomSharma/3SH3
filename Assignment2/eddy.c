@@ -48,7 +48,7 @@ int main() {
     int page_faults_total_miss = 0;
     int total_addresses = 0 ;
     int logical_address=0;
-    int value = 0;
+    
 
     uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
     TLBEntry *TLB = NULL;
@@ -80,9 +80,8 @@ int main() {
     while (fgets(buff, BUFFER_SIZE, fptr) != NULL) {
         total_addresses++;
         logical_address = atoi(buff); // given addresses
-        PAGE_NUM = (logical_address >> OFFSET_BITS) & 0xff;
+        PAGE_NUM = (logical_address >> OFFSET_BITS);
         PAGE_OFFSET = atoi(buff) & 0xff;
-        
 
         int index;
         for (index = 0; index < MAX_ENTRIES; index++) {
@@ -107,11 +106,13 @@ int main() {
             TLB[TLB_index].FRAME_NUM = FRAME_NUM;
             TLB_index = ++TLB_index % MAX_ENTRIES;
         }
-        Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET;
-        fprintf(output, "Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, value);
+        
+        Physical_address = (FRAME_NUM * FRAME_SIZE) + PAGE_OFFSET;
+        signed char value = *(signed char*)(intArray + Physical_address);
+        printf("Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, value);
 
     }
-    fprintf(output, "Total addresses = %d\nPage faults = %d\nTLB Hits = %d", total_addresses, page_faults_total_miss,TLB_total_hits);
+    printf("Total addresses = %d\nPage faults = %d\nTLB Hits = %d", total_addresses, page_faults_total_miss,TLB_total_hits);
     fclose(fptr);
     fclose(output);
     free(TLB);
