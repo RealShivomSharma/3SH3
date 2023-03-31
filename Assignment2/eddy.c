@@ -24,7 +24,7 @@ Assignment 3
 #define MISS 0
 #define INT_SIZE 4
 #define INT_COUNT 
-#define MEMORY_SIZE PAGE_SIZE * INT_SIZE
+#define MEMORY_SIZE 1<<15
 
 signed char *mmapfptr;
 int intArray[MEMORY_SIZE];
@@ -38,8 +38,8 @@ typedef struct {
 
 int main() {
     char buff[BUFFER_SIZE];
-    int PAGE_NUM = 0;
-    int FRAME_NUM = 0;
+    int PAGE_NUM;
+    int FRAME_NUM;
     int PAGE_OFFSET = 0;
     int Physical_address = 0;
     int TLB_STATUS = 0;
@@ -48,11 +48,13 @@ int main() {
     int page_faults_total_miss = 0;
     int total_addresses = 0 ;
     int logical_address=0;
+
+    int queued_index = 0;
     
 
     uint16_t *page_table = calloc(PAGE_TABLE, sizeof(uint16_t));
     TLBEntry *TLB = NULL;
-    TLB = MAX_ENTRIES, sizeof(TLBEntry));
+    TLB = calloc(MAX_ENTRIES, sizeof(TLBEntry));
     int TLB_index = 0;
 
     //opening addresses file
@@ -80,7 +82,7 @@ int main() {
     while (fgets(buff, BUFFER_SIZE, fptr) != NULL) {
         total_addresses++;
         logical_address = atoi(buff); // given addresses
-        PAGE_NUM = (logical_address >> OFFSET_BITS);
+        PAGE_NUM = (logical_address >> OFFSET_BITS) & 0xff;
         PAGE_OFFSET = atoi(buff) & 0xff;
 
         int index;
@@ -92,27 +94,33 @@ int main() {
                 break;
             } 
         }
-        if (index == MAX_ENTRIES) {
+        fprintf(output, "\n%d\n", PAGE_NUM);
+        if (!TLB_STATUS) {  //check for tlb miss
             TLB_total_miss++;
             FRAME_NUM = page_table[PAGE_NUM];
             if (FRAME_NUM == 0) {
                 //Page Fault
                 page_faults_total_miss++;
+                FRAME_NUM = queued_index;
+                queued_index++;
+                if (queued_index == (1<<15/ PAGE_SIZE)){
+                    queued_index = 0;
+                }
                 memcpy(intArray + FRAME_NUM* PAGE_SIZE, mmapfptr+PAGE_NUM* PAGE_SIZE, PAGE_SIZE);
                 page_table[PAGE_NUM] = FRAME_NUM;
                 
             }
             TLB[TLB_index].PAGE_NUM = PAGE_NUM;
             TLB[TLB_index].FRAME_NUM = FRAME_NUM;
-            TLB_index = ++TLB_index % MAX_ENTRIES;
+            TLB_index = (++TLB_index) % MAX_ENTRIES;
         }
         
-        Physical_address = (FRAME_NUM * FRAME_SIZE) + PAGE_OFFSET;
+        Physical_address = (FRAME_NUM << 8)|  PAGE_OFFSET;
         signed char value = *(signed char*)(intArray + Physical_address);
-        printf("Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, value);
+        fprintf(output, "Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, value);
 
     }
-    printf("Total addresses = %d\nPage faults = %d\nTLB Hits = %d", total_addresses, page_faults_total_miss,TLB_total_hits);
+    fprintf(output, "Total addresses = %d\nPage faults = %d\nTLB Hits = %d\nTLB Miss = %d", total_addresses, page_faults_total_miss,TLB_total_hits, TLB_total_miss);
     fclose(fptr);
     fclose(output);
     free(TLB);
