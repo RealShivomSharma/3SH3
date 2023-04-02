@@ -3,143 +3,135 @@
 #include <string.h> /*For memcpy function*/
 #include <fcntl.h> /*For file descriptors*/
 #include <stdlib.h> /*For file descriptors*/
-/*
+
+#define BUFFER_SIZE 10 /*Define buffer size to read addresses file*/
+#define MISS -1 /*Define miss as  -1*/
+#define PAGE_SIZE 256 /*Each page consists of 256 bytes*/
+#define PAGES PAGE_SIZE /*PAGE Size is equal to 256 bytes*/
+#define MAX_ENTRIES 16 /*MAX entries in the tlb is 16*/
+#define OFFSET_BITS 8 /*2^8 -> 8 bits in offset*/
+#define OFFSET_MASK 255  /* OFFSET_MASk = 2^8 -1 */
+#define FRAME_SIZE PAGE_SIZE /*FrAME SIZE = PAGE_SIZE*/
+#define BACKING_STORE "BACKING_STORE.bin"
+#define ADDRESSES "addresses.txt"
+#define LOGICAL_ADDRESS_SPACE 65536
+#define PHYSICAL_ADDRESS_SPACE LOGICAL_ADDRESS_SPACE/2
+
+
+/* 
 Shivom Sharma 400332395
 Eddy Su 400263717
-Assignment 3    
+Assignment 2  
 */
 
-#define virt_addr 63536
-#define Physical_address_space virt_addr * 1/2
-#define BUFFER_SIZE 6
-#define MAX_ENTRIES 16 //
-#define PAGES 256 //
-#define PAGE_TABLE 32768 //
-#define OFFSET_BITS 8
-#define OFFSET_MASK 255
-#define PAGE_SIZE 256
-#define FRAME_SIZE PAGE_SIZE
-#define HIT 1   
-#define MISS 0
-#define INT_SIZE 4
-#define INT_COUNT 
-#define MEMORY_SIZE PAGE_SIZE * INT_SIZE
+typedef struct { int PAGE_NUM; int FRAME_NUM; } TLBEntry; //Declare structure for TLBEntry with page and frame numbers
+signed char *start_address; //Declare signed char for the starting address
+/*Initialize global variables to hold the number of hits and page faults*/
+int TLB_hits = 0; 
+int page_faults = 0; 
 
-signed char *mmapfptr;
-int intArray[MEMORY_SIZE];
+/*Prototypes for utility functions for navigating TLB*/
+int search_TLB(int PAGE_NUM, TLBEntry *T);
+void TLB_Add(int PAGE_NUMBER, int FRAME_NUMBER, int index, TLBEntry *T);
+void TLB_Update(int OLD_PAGE, int NEW_PAGE, TLBEntry *T);
 
-int isEmpty(TLB *T);
-int isFull(TLB *T);
-void TLB_init(TLB *T);
-void search_TLB(int *PAGE_NUM, TLB *T);
-void TLB_Add(int *PAGE_NUM, TLB *T);
-void TLB_Update(void);
-struct {
-    int PAGE_NUM;
-    int FRAME_NUM;
-}TLBEntry;
-struct {
-    int rear;
-    int front;
-    int count;
-    TLBEntry entries[MAX_ENTRIES];
-}TLB;
-
-//Our
-struct {
-
-}PhysicalMemory;
-
-void search_TLB(int *PAGE_NUM, TLB *T) {
-    for (int i =0; i < MAX_ENTRIES; i++) {
-        if (PAGE_NUM = TLB[i].PAGE_NUM) {
-            FRAME_NUM = TLB[i].PAGE_NUM;
-            TLB_STATUS = HIT;
-        }
-        else {
-            TLB_STATUS = MISS;
-        }
-
-    }
-    if (TLB_STATUS == MISS) {
-        FRAME_NUM = page_table[PAGE_NUM];
-        if(FRAME_NUM == -1) {
-            // Page Fault
+int search_TLB(int PAGE_NUM, TLBEntry *T) {
+    //Search the TLB to find a matching page number
+    for (int i = 0; i < MAX_ENTRIES; i++) {
+        if (PAGE_NUM == T[i].PAGE_NUM) { //If the page number is found, return the corresponding frame
+            return T[i].FRAME_NUM;
         }
     }
     return MISS; //Returns a miss if the frame is not present in the TLB
 }
-    
-void TLB_Add(int *PAGE_NUM, int *FRAME_NUM, TLB *TLB) { 
-    if (TLB->count == MAX_ENTRIES) {
-        TLB->entries[front].PAGE_NUM = PAGE_NUM;
-        TLB->entries[front].FRAME_NUM = FRAME_NUM;
+
+void TLB_Add(int PAGE_NUMBER, int FRAME_NUMBER, int index, TLBEntry* T) {
+    T[index].PAGE_NUM = PAGE_NUMBER; //Replace page number at given index
+    T[index].FRAME_NUM = FRAME_NUMBER; //Replace frame number at given index
+   
+
+}
+
+void TLB_Update(int OLD_PAGE, int NEW_PAGE, TLBEntry *T) {
+    if (search_TLB(OLD_PAGE, T)) { //Search the tlb to find the old page passed in
+        for (int i = 0; i < MAX_ENTRIES; i++) { //Loop through the TLB
+            if(T[i].PAGE_NUM == OLD_PAGE)  //Find the page once the old page is found
+                T[i].PAGE_NUM = NEW_PAGE; //Update the page in the TLB
+        }
     }
-     
-}
-void TLB_Update() {
 
 }
 
-void TLB_Init(TLB *T) {
-    T->entries = {0};
-    T->front = -1;
-    T->rear = -1;
-    T->count = 0;
-}
 
 int main() {
-    int page_table[PAGES] = {-1};
-    char buff[BUFFER_SIZE];
-    int PAGE_NUM = 0;
+    TLBEntry TLB[MAX_ENTRIES]; //Declare collection of TLB entries
+    
+    char buff[BUFFER_SIZE]; //Create buffer to read from addressses file
+    /*Initialize the memory values to 0 */
+    int PAGE_NUM = 0; 
     int PAGE_OFFSET = 0;
     int Physical_address = 0;
-    int frame_number = 0;
-    int TLB_STATUS = 0;
-    TLB TLB;
-    TLB_INIT(TLB);
-
+    int total_addresses = 0;
+    int logical_address = 0;
+    int frame_count = 0;
+    int TLB_index = 0;
+    /*Create space to store physical memory, initialized at 0*/
+    signed char physical_memory[PHYSICAL_ADDRESS_SPACE] = {0};
+    int queued_index = 0;
+    /*Initialize the page table to -1 for all entries*/
+    int page_table[PAGES];
+    for (int i = 0; i < 256; i++) {
+        page_table[i] = -1;
+    }
+    signed char byte_value; //Create a signed character to read in value at physical address
     //opening addresses file
-    FILE *fptr = fopen("addresses.txt", "r"); 
-    if (fptr == NULL){
+    FILE *addresses = fopen(ADDRESSES, "r"); 
+    if (addresses == NULL){
         printf("addresses.txt does not exist or cannot be opened.");
         return 0;
     }
 
-    //opening output file
-    FILE *output = fopen("output.txt", "r"); 
-    if (output == NULL){
-        printf("output.txt does not exist or cannot be opened.");
-        return 0;
-    }
-
     //opening BACKING_STORE binary file
-    int mmapfile_fd = open("BACKING_STORE.bin", O_RDONLY); //read only
-    if (mmapfile_fd == -1){
+    int backing_store = open(BACKING_STORE, O_RDONLY); //read only
+    if (backing_store == -1){
         printf("BACKING_STORE.bin does not exist or cannot be opened.");
         return 0;
     }
-
-    while (fgets(buff, BUFFER_SIZE, fptr) != NULL) {
-        PAGE_NUM = atoi(buff) >> OFFSET_BITS;
-        for (int i = 0; i < MAX_ENTRIES; i++) {
-            if (PAGE_NUM == TLB[i].PAGE_NUM) {
-                FRAME_NUM = TLB[i].FRAME_NUM;
-                TLB_STATUS = HIT;
-            }
-            else {
-                TLB_STATUS = MISS;
-            } 
+    //Create the starting address mapping the pages to memory
+    start_address = mmap(0, LOGICAL_ADDRESS_SPACE, PROT_READ, MAP_PRIVATE, backing_store, 0);
+    /*While the buffer is not at the end*/
+    while (fgets(buff, BUFFER_SIZE, addresses) != NULL) {
+        total_addresses++; //Increement the total number of addresses
+        logical_address = atoi(buff); //Calculate the logical address
+        PAGE_NUM = (logical_address >> OFFSET_BITS); //Get the page number
+        PAGE_OFFSET = logical_address&OFFSET_MASK; //Get the page offset
+        int FRAME_NUM = search_TLB(PAGE_NUM, TLB); //Search the tlb for the given page number
+        if (FRAME_NUM != MISS) { //If there is a TLB hit
+            Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET; //Calculate the physical address at a given page number
+            byte_value = physical_memory[Physical_address]; //Get the byte value from the physical memory
+            printf("Virtual address: %d Physical address = %d Value=%d\n", logical_address, Physical_address, byte_value);//Print the output
+            TLB_hits++; //Increase the number of TLB hits 
         }
-        if (TLB_STATUS = MISS) {
-            FRAME_NUM = page_table[PAGE_NUM];
-            if (FRAME_NUM == -1) {
-                //Page Fault
-                mmapfptr = mmap(0, MEMORY_SIZE, PROT_READ, MAP_PRIVATE, mmapfile_fd, 0);
-                for (int i = 0; i < MEMORY_SIZE; i++) {
-                    memcpy(intArray + i, mmapfptr + 4*i, INT_SIZE);
+        else { //If there is a TLB miss
+            FRAME_NUM = page_table[PAGE_NUM]; //Get frame number from page table
+            if(FRAME_NUM == -1) { //If the frame number is not found page fault
+                //page fault
+                page_faults++; 
+                FRAME_NUM = queued_index; //Set the frame number to the queued index
+                queued_index = (queued_index + 1) % (PHYSICAL_ADDRESS_SPACE / PAGE_SIZE); //Increment it and mod to see if it needs to be reset
+
+                memcpy(physical_memory + frame_count*FRAME_SIZE, start_address + PAGE_NUM *PAGE_SIZE, PAGE_SIZE); //Copy a page over from the memory
+
+                for(int i =0; i < PAGES; i++) { //Loop through the pages
+                    if (page_table[i] == frame_count) { //Set frame count to negative one and update the TLB for the chang ein physical memory
+                        page_table[i] = -1;
+                        TLB_Update(i, PAGE_NUM, TLB);
+                    }
                 }
-                
+                page_table[PAGE_NUM] = frame_count; //Store hte frame in the page table
+                frame_count = (frame_count +1)%128; //Increment the frame count to the max of 128 and reset to 0 once it has been reached
+
+
             }
             Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET; //Store the physical address
             byte_value = physical_memory[Physical_address]; //Grab the value from the physical address
@@ -149,12 +141,11 @@ int main() {
 
         }
         
-
-        PAGE_OFFSET = atoi(buff) & OFFSET_MASK;
-        Physical_address = (frame_number << OFFSET_BITS) | PAGE_OFFSET;
-
+        
     }
-    fclose(fptr);
-    free(TLB);
+    munmap(start_address, LOGICAL_ADDRESS_SPACE); //Unmap the memory allocated
+    printf("Total addresses = %d\nPage faults = %d\nTLB Hits = %d", total_addresses, page_faults,TLB_hits); 
+    fclose(addresses);
+
     return 0;
 }
