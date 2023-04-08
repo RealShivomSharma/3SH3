@@ -4,86 +4,85 @@
 
 #define MAX_REQUESTS 20
 
-int cmpfunc(const void *a, const void *b) {
-    return (*(int*)a - *(int*)b);
+int cmpfunc (const void * a, const void * b) {
+   return ( *(int*)a - *(int*)b );
 }
 
-int main(int argc, char *argv[]) {
-    printf("lol");
-    if (argc != 3) {
-        printf("Usage: %s initial_position direction\n", argv[0]);
-        return 1;
-    }
+int abs(int a) {
+    if (a < 0) return -a;
+    return a;
+}
 
-    int initial_pos = atoi(argv[1]);
-    char *direction = argv[2];
-
-    if (strcmp(direction, "LEFT") != 0 && strcmp(direction, "RIGHT") != 0) {
-        printf("Invalid direction: %s\n", direction);
-        return 1;
-    }
-
-    int requests[MAX_REQUESTS];
-    int num_requests = 0;
-
-    FILE *f = fopen("request.bin", "rb");
-    if (f == NULL) {
-        printf("Failed to open request.bin\n");
-        return 1;
-    }
-
-    while (num_requests < MAX_REQUESTS && fread(&requests[num_requests], sizeof(int), 1, f) == 1) {
-        num_requests++;
-    }
-
-    fclose(f);
-
-    int sorted_requests[MAX_REQUESTS];
-    memcpy(sorted_requests, requests, num_requests * sizeof(int));
-    qsort(sorted_requests, num_requests, sizeof(int), cmpfunc);
-
-    int serviced_requests[MAX_REQUESTS];
-    int num_serviced_requests = 0;
-
-    int current_pos = initial_pos;
+int sstf(int current, int* requests, int size) {
+    int serviced[MAX_REQUESTS];
     int total_head_movements = 0;
-
-    while (num_serviced_requests < num_requests) {
-        int shortest_distance = 300;
-        int shortest_index = -1;
-
-        for (int i = 0; i < num_requests; i++) {
-            int distance = abs(current_pos - sorted_requests[i]);
-            if (distance < shortest_distance && !serviced_requests[i]) {
-                shortest_distance = distance;
-                shortest_index = i;
+    memset(serviced, 0, sizeof(serviced));
+    int i, j, closest, distance;
+    for (i = 0; i < size; i++) {
+        closest = -1;
+        distance = 999999;
+        for (j = 0; j < size; j++) {
+            if (!serviced[j]) {
+                if (abs(requests[j] - current) < distance) {
+                    distance = abs(requests[j] - current);
+                    closest = j;
+                }
             }
         }
-
-        if (shortest_index == -1) {
-            if (strcmp(direction, "LEFT") == 0) {
-                direction = "RIGHT";
-            } else {
-                direction = "LEFT";
-            }
-            continue;
-        }
-
-        serviced_requests[shortest_index] = 1;
-        num_serviced_requests++;
-
-        int next_pos = sorted_requests[shortest_index];
-        total_head_movements += abs(current_pos - next_pos);
-        current_pos = next_pos;
-
-        if (strcmp(direction, "LEFT") == 0 && current_pos == 0) {
-            direction = "RIGHT";
-        } else if (strcmp(direction, "RIGHT") == 0 && current_pos == 299) {
-            direction = "LEFT";
+        serviced[closest] = 1;
+        total_head_movements += distance;
+        current = requests[closest];
+        //printf("%d, ", current);
+         if (i < (size-1)){
+            printf("%d, ", current);
+        } else {
+            printf("%d", current);
         }
     }
+    return total_head_movements;
+}
 
-    printf("SSTF Total Head Movements: %d\n", total_head_movements);
-
+int main(int argc, char* argv[]) {
+    printf("SSTF DISK SCHEDULING ALGORITHM \n\n");
+    if (argc < 3) {
+        printf("not enough arguments <initial position> <direction>\n");
+        return 1;
+    }
+    int initial_position = atoi(argv[1]);
+    char* direction = argv[2];
+    int requests[MAX_REQUESTS];
+    int size = 0;
+    FILE* fp;
+    fp = fopen("request.bin", "rb");
+    if (fp == NULL) {
+        printf("Error: Unable to open request file\n");
+        return 1;
+    }
+    while (fread(&requests[size], sizeof(int), 1, fp)) {
+        size++;
+    }
+    fclose(fp);
+    int sorted_requests[MAX_REQUESTS];
+    memcpy(sorted_requests, requests, sizeof(requests));
+    qsort(sorted_requests, size, sizeof(int), cmpfunc);
+    int total_head_movements;
+    //printf("%d\n", initial_position);
+    if (strcmp(direction, "RIGHT") == 0) {
+        total_head_movements = sstf(initial_position, sorted_requests, size);
+    } else if (strcmp(direction, "LEFT") == 0) {
+        int i;
+        /*for (i = size - 1; i >= 0; i--) {
+            if (i > 0){
+                printf("%d, ", requests[i]);
+            } else {
+                printf("%d", requests[i]);
+            }
+        }*/
+        total_head_movements = sstf(initial_position, sorted_requests, size);
+    } else {
+        printf("Error: Invalid direction specified\n");
+        return 1;
+    }
+    printf("\n\nTotal head movements: %d\n", total_head_movements);
     return 0;
 }
