@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     // Read requests from file
     FILE *fp;
     int requests[MAX_REQUESTS];
-    fp = fopen("requests.bin", "rb");
+    fp = fopen("request.bin", "rb");
     if (fp == NULL) {
         printf("Error: Could not open file.\n");
         return 1;
@@ -41,14 +41,18 @@ int main(int argc, char *argv[]) {
     // FCFS algorithm
     int total_head_movements = 0;
     int curr_pos = initial_pos;
-    printf("FCFS Algorithm:\n");
+    printf("FCFS DISK SCHEDULING ALGORITHM:\n\n");
     for (int i = 0; i < MAX_REQUESTS; i++) {
         int distance = abs(requests[i] - curr_pos);
         total_head_movements += distance;
-        printf("Servicing request %d at cylinder %d. Head movement: %d\n", i+1, requests[i], distance);
+        if (i < (MAX_REQUESTS-1)){
+            printf("%d, ", requests[i]);
+        } else {
+            printf("%d", requests[i]);
+        }
         curr_pos = requests[i];
     }
-    printf("Total head movements: %d\n", total_head_movements);
+    printf("\n\nTotal head movements: %d\n", total_head_movements);
 
     return 0;
 }
