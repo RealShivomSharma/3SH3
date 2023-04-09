@@ -14,24 +14,24 @@ int abs(int a) {
 }
 
 int sstf(int current, int* requests, int size) {
-    int serviced[MAX_REQUESTS];
+    //int serviced[MAX_REQUESTS];
     int total_head_movements = 0;
-    memset(serviced, 0, sizeof(serviced));
+    //memset(serviced, 0, sizeof(serviced));
     int i, j, closest, distance;
     for (i = 0; i < size; i++) {
         closest = -1;
         distance = 999999;
         for (j = 0; j < size; j++) {
-            if (!serviced[j]) {
+            if (requests[j]!=1) {
                 if (abs(requests[j] - current) < distance) {
                     distance = abs(requests[j] - current);
                     closest = j;
                 }
             }
         }
-        serviced[closest] = 1;
-        total_head_movements += distance;
         current = requests[closest];
+        requests[closest] = 1;
+        total_head_movements += distance;
         //printf("%d, ", current);
          if (i < (size-1)){
             printf("%d, ", current);
@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
         printf("Error: Unable to open request file\n");
         return 1;
     }
-    while (fread(&requests[size], sizeof(int), 1, fp)) {
+    while (size < 20 && fread(&requests[size], sizeof(int), 1, fp)) {
         size++;
     }
     fclose(fp);
@@ -67,19 +67,9 @@ int main(int argc, char* argv[]) {
     qsort(sorted_requests, size, sizeof(int), cmpfunc);
     int total_head_movements;
     //printf("%d\n", initial_position);
-    if (strcmp(direction, "RIGHT") == 0) {
+    if (strcmp(direction, "RIGHT") == 0 || strcmp(direction, "LEFT") == 0) {
         total_head_movements = sstf(initial_position, sorted_requests, size);
-    } else if (strcmp(direction, "LEFT") == 0) {
-        int i;
-        /*for (i = size - 1; i >= 0; i--) {
-            if (i > 0){
-                printf("%d, ", requests[i]);
-            } else {
-                printf("%d", requests[i]);
-            }
-        }*/
-        total_head_movements = sstf(initial_position, sorted_requests, size);
-    } else {
+    }  else {
         printf("Error: Invalid direction specified\n");
         return 1;
     }
