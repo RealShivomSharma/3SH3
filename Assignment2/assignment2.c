@@ -105,6 +105,7 @@ int main() {
         logical_address = atoi(buff); //Calculate the logical address
         PAGE_NUM = (logical_address >> OFFSET_BITS); //Get the page number
         PAGE_OFFSET = logical_address&OFFSET_MASK; //Get the page offset
+        printf("logical address : %d \n page number : %d \n page offset : %d \n", logical_address, PAGE_NUM, PAGE_OFFSET);
         int FRAME_NUM = search_TLB(PAGE_NUM, TLB); //Search the tlb for the given page number
         if (FRAME_NUM != MISS) { //If there is a TLB hit
             Physical_address = (FRAME_NUM << OFFSET_BITS) | PAGE_OFFSET; //Calculate the physical address at a given page number
