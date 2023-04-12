@@ -1,7 +1,8 @@
 /* 
-Shivom Sharma 400332395
-Eddy Su 400263717
+Shivom Sharma 400332395 shars119
+Eddy Su 400263717 suc22
 Lab test 2  
+Group 70
 */
 
 
